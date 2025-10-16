@@ -27,8 +27,8 @@ st.write(list(df.columns))
 # ================================
 # 📅 Date Range Setup
 # ================================
-min_dt = df['last_updated'].min()
-max_dt = df['last_updated'].max()
+min_dt = df['last_updated'].min().to_pydatetime()
+max_dt = df['last_updated'].max().to_pydatetime()
 
 # Sidebar Filters
 st.sidebar.header("🔧 Global Filters")
@@ -126,17 +126,20 @@ with tab4:
 
     st.write("👉 Choropleth or map visualizations will go here.")
     if not filtered_df.empty:
+        filtered_df["temp_size"] = filtered_df["temperature_celsius"].abs()
         fig = px.scatter_geo(
             filtered_df,
             lat="latitude",
             lon="longitude",
             color="temperature_celsius",
             hover_name="location_name",
-            size="temperature_celsius",
+            size="temp_size",
             projection="natural earth",
             title="Temperature Distribution Map"
         )
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No data available for the selected filters.")
 
 # ----------------------------
 # ⚠️ 5. Extremes
