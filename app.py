@@ -1,187 +1,151 @@
- feature/milestone2
-import pandas as pd
 import streamlit as st
+import pandas as pd
 import plotly.express as px
 
-# 🌍 Streamlit page setup
+# ================================
+# 🔸 Page Configuration
+# ================================
 st.set_page_config(page_title="ClimateScope Dashboard", layout="wide")
-st.title("🌍 ClimateScope – Global Weather Insights Dashboard (Wireframe)")
 
-# 📥 Load dataset with proper time conversion
+# ================================
+# 📥 Load Data
+# ================================
 @st.cache_data
 def load_data():
     df = pd.read_csv("processed/cleaned_weather.csv")
-
-    # 🔎 Show columns to confirm structure
-    st.write("🔎 Columns in dataset:", df.columns.tolist())
-
-    # ✅ Use 'last_updated' column for time if available
-    if "year_month" in df.columns:
-        df["year_month"] = pd.PeriodIndex(df["year_month"], freq="M").to_timestamp()
-
-    elif "last_updated" in df.columns:
-        df["year_month"] = pd.to_datetime(df["last_updated"], errors="coerce").dt.to_period("M").dt.to_timestamp()
-
-    elif "date" in df.columns:
-        df["year_month"] = pd.to_datetime(df["date"], errors="coerce").dt.to_period("M").dt.to_timestamp()
-
-    else:
-        # Fallback if no date-like column
-        st.warning("⚠️ No time column found — using dummy date.")
-        df["year_month"] = pd.to_datetime("2000-01-01")
-
-    # Drop rows where year_month couldn't be parsed
-    df = df.dropna(subset=["year_month"])
-    df["year_month"] = pd.to_datetime(df["year_month"])
-
+    df['last_updated'] = pd.to_datetime(df['last_updated'], errors='coerce')
     return df
 
-# Load the data
 df = load_data()
 
-# 🧠 Detect useful columns
-country_col = "country" if "country" in df.columns else None
-temp_col = next((c for c in df.columns if "temp" in c.lower() or "temperature" in c.lower()), None)
+st.title("🌍 ClimateScope – Global Weather Insights Dashboard (Final Version)")
 
-# 🧰 Sidebar filters
-st.sidebar.header("Filters")
+# Show dataset columns
+st.subheader("🔎 Columns in dataset:")
+st.write(list(df.columns))
 
-# ✅ Ensure min/max are Python datetime, not pandas Timestamps
-min_dt = pd.to_datetime(df["year_month"].min()).to_pydatetime()
-max_dt = pd.to_datetime(df["year_month"].max()).to_pydatetime()
+# ================================
+# 📅 Date Range Setup
+# ================================
+min_dt = df['last_updated'].min()
+max_dt = df['last_updated'].max()
 
+# Sidebar Filters
+st.sidebar.header("🔧 Global Filters")
+
+# ✅ Unique keys added to avoid duplicate widget errors
 date_range = st.sidebar.slider(
-    "Date Range", min_value=min_dt, max_value=max_dt, value=(min_dt, max_dt)
+    "Select Date Range",
+    min_value=min_dt,
+    max_value=max_dt,
+    value=(min_dt, max_dt),
+    key="global_date_slider"
 )
 
-selected_countries = []
-if country_col:
-    countries = sorted(df[country_col].dropna().unique().tolist())
-    selected_countries = st.sidebar.multiselect(
-        "Select Countries", countries[:50], default=countries[:5]
-    )
-
-# 🪄 Apply filters
-mask = df["year_month"].between(date_range[0], date_range[1])
-if country_col and selected_countries:
-    mask &= df[country_col].isin(selected_countries)
-dfv = df[mask]
-
-# 🧭 Dashboard Tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📈 Trends", "📅 Seasonality", "📊 Correlations", "🌍 Geographic", "⚠️ Extremes"]
+selected_countries = st.sidebar.multiselect(
+    "Select Countries",
+    options=sorted(df['country'].dropna().unique()),
+    default=[],
+    key="global_country_multiselect"
 )
 
+# Filter data based on selections
+mask = (df['last_updated'] >= pd.to_datetime(date_range[0])) & (df['last_updated'] <= pd.to_datetime(date_range[1]))
+if selected_countries:
+    mask &= df['country'].isin(selected_countries)
+
+filtered_df = df[mask]
+
+st.write(f"📊 Showing data for {len(filtered_df)} records")
+
+# ================================
+# 📈 TABS FOR SECTIONS
+# ================================
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Trends", "📅 Seasonality", "📊 Correlations", "🌍 Geographic", "⚠️ Extremes"])
+
+# ----------------------------
+# 📈 1. Trends
+# ----------------------------
 with tab1:
     st.subheader("📈 Global / Regional Trends")
-    st.info("👉 Placeholder: Time-series charts will go here.")
 
-with tab2:
-    st.subheader("📅 Seasonal Patterns")
-    st.info("👉 Placeholder: Monthly seasonality charts will go here .")
-
-with tab3:
-    st.subheader("📊 Correlation Analysis")
-    st.info("👉 Placeholder: Correlation heatmap will go here .")
-
-with tab4:
-    st.subheader("🌍 Geographic Visualization")
-    st.info("👉 Placeholder: Choropleth maps will go here .")
-
-with tab5:
-    st.subheader("⚠️ Extreme Events")
-    st.info("👉 Placeholder: Extreme event charts will go here.")
-
-import pandas as pd
-import streamlit as st
-import plotly.express as px
-
-# 🌍 Streamlit page setup
-st.set_page_config(page_title="ClimateScope Dashboard", layout="wide")
-st.title("🌍 ClimateScope – Global Weather Insights Dashboard (Wireframe)")
-
-# 📥 Load dataset with proper time conversion
-@st.cache_data
-def load_data():
-    df = pd.read_csv("processed/cleaned_weather.csv")
-
-    # 🔎 Show columns to confirm structure
-    st.write("🔎 Columns in dataset:", df.columns.tolist())
-
-    # ✅ Use 'last_updated' column for time if available
-    if "year_month" in df.columns:
-        df["year_month"] = pd.PeriodIndex(df["year_month"], freq="M").to_timestamp()
-
-    elif "last_updated" in df.columns:
-        df["year_month"] = pd.to_datetime(df["last_updated"], errors="coerce").dt.to_period("M").dt.to_timestamp()
-
-    elif "date" in df.columns:
-        df["year_month"] = pd.to_datetime(df["date"], errors="coerce").dt.to_period("M").dt.to_timestamp()
-
+    st.write("👉 Time-series charts will go here.")
+    if not filtered_df.empty:
+        fig = px.line(
+            filtered_df.sort_values("last_updated"),
+            x="last_updated",
+            y="temperature_celsius",
+            color="country",
+            title="Temperature Trends Over Time"
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        # Fallback if no date-like column
-        st.warning("⚠️ No time column found — using dummy date.")
-        df["year_month"] = pd.to_datetime("2000-01-01")
+        st.info("No data available for the selected filters.")
 
-    # Drop rows where year_month couldn't be parsed
-    df = df.dropna(subset=["year_month"])
-    df["year_month"] = pd.to_datetime(df["year_month"])
-
-    return df
-
-# Load the data
-df = load_data()
-
-# 🧠 Detect useful columns
-country_col = "country" if "country" in df.columns else None
-temp_col = next((c for c in df.columns if "temp" in c.lower() or "temperature" in c.lower()), None)
-
-# 🧰 Sidebar filters
-st.sidebar.header("Filters")
-
-# ✅ Ensure min/max are Python datetime, not pandas Timestamps
-min_dt = pd.to_datetime(df["year_month"].min()).to_pydatetime()
-max_dt = pd.to_datetime(df["year_month"].max()).to_pydatetime()
-
-date_range = st.sidebar.slider(
-    "Date Range", min_value=min_dt, max_value=max_dt, value=(min_dt, max_dt)
-)
-
-selected_countries = []
-if country_col:
-    countries = sorted(df[country_col].dropna().unique().tolist())
-    selected_countries = st.sidebar.multiselect(
-        "Select Countries", countries[:50], default=countries[:5]
-    )
-
-# 🪄 Apply filters
-mask = df["year_month"].between(date_range[0], date_range[1])
-if country_col and selected_countries:
-    mask &= df[country_col].isin(selected_countries)
-dfv = df[mask]
-
-# 🧭 Dashboard Tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📈 Trends", "📅 Seasonality", "📊 Correlations", "🌍 Geographic", "⚠️ Extremes"]
-)
-
-with tab1:
-    st.subheader("📈 Global / Regional Trends")
-    st.info("👉 Placeholder: Time-series charts will go here.")
-
+# ----------------------------
+# 📅 2. Seasonality
+# ----------------------------
 with tab2:
     st.subheader("📅 Seasonal Patterns")
-    st.info("👉 Placeholder: Monthly seasonality charts will go here .")
 
+    st.write("👉 Monthly/seasonal analysis will go here.")
+
+    season_countries = st.multiselect(
+        "Select Countries for Seasonality",
+        options=sorted(df['country'].dropna().unique()),
+        key="seasonality_multiselect"
+    )
+
+    if season_countries:
+        season_df = df[df['country'].isin(season_countries)]
+        season_df['month'] = season_df['last_updated'].dt.month
+        fig = px.box(
+            season_df,
+            x="month",
+            y="temperature_celsius",
+            color="country",
+            title="Seasonal Temperature Distribution"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+# ----------------------------
+# 📊 3. Correlations
+# ----------------------------
 with tab3:
-    st.subheader("📊 Correlation Analysis")
-    st.info("👉 Placeholder: Correlation heatmap will go here .")
+    st.subheader("📊 Correlations")
 
+    st.write("👉 Correlation heatmaps or scatter plots can go here.")
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    st.write(filtered_df[numeric_cols].corr())
+
+# ----------------------------
+# 🌍 4. Geographic Patterns
+# ----------------------------
 with tab4:
-    st.subheader("🌍 Geographic Visualization")
-    st.info("👉 Placeholder: Choropleth maps will go here .")
+    st.subheader("🌍 Geographic Patterns")
 
+    st.write("👉 Choropleth or map visualizations will go here.")
+    if not filtered_df.empty:
+        fig = px.scatter_geo(
+            filtered_df,
+            lat="latitude",
+            lon="longitude",
+            color="temperature_celsius",
+            hover_name="location_name",
+            size="temperature_celsius",
+            projection="natural earth",
+            title="Temperature Distribution Map"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+# ----------------------------
+# ⚠️ 5. Extremes
+# ----------------------------
 with tab5:
-    st.subheader("⚠️ Extreme Events")
-    st.info("👉 Placeholder: Extreme event charts will go here.")
- main
+    st.subheader("⚠️ Extreme Weather Events")
+    st.write("👉 Detected anomalies or extremes will be displayed here.")
+
+    extremes_df = filtered_df[
+        (filtered_df['temperature_celsius'] > 45) | (filtered_df['temperature_celsius'] < -20)
+    ]
+    st.write(extremes_df.head(50))
